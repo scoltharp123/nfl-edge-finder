@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge — NFL Value Finder</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232c; --line:#2a333e; --text:#e6edf3; --muted:#8b98a5;
+    --green:#3fb950; --green-bg:rgba(63,185,80,.12); --amber:#d29922; --amber-bg:rgba(210,153,34,.13);
+    --red:#f85149; --red-bg:rgba(248,81,73,.12); --blue:#58a6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+  header{padding:18px 20px 0;max-width:1100px;margin:0 auto}
+  h1{font-size:22px;margin:0;letter-spacing:-.3px}
+  h1 span{color:var(--green)}
+  .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  main{max-width:1100px;margin:0 auto;padding:12px 20px 60px}
+  nav{display:flex;gap:4px;margin:16px 0 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  nav button{background:none;border:0;color:var(--muted);padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
+  nav button.on{color:var(--text);border-color:var(--green)}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted);font-size:12px}
+  .chip b{color:var(--text);font-weight:600}
+  button.btn{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
+  button.btn:hover{border-color:var(--muted)}
+  button.primary{background:var(--green);border-color:var(--green);color:#04120a}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card.Strong{border-color:var(--green)}
+  .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .pick{font-size:17px;font-weight:700}
+  .game{color:var(--muted);font-size:12px}
+  .badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+  .b-Strong{background:var(--green-bg);color:var(--green)}
+  .b-Lean{background:var(--green-bg);color:#8fd99a}
+  .b-Thin{background:var(--amber-bg);color:var(--amber)}
+  .b-Pass{background:var(--red-bg);color:var(--red)}
+  .b-Trap{background:var(--red-bg);color:var(--red)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+  .stat .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+  .stat .v{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  .foot{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{color:var(--muted);font-weight:600;font-size:12px;cursor:pointer;user-select:none}
+  td.r,th.r{text-align:right}
+  .tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .empty{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+  .empty h3{color:var(--text);margin:0 0 6px}
+  .settings{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+  label{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font:inherit}
+  td input,td select{padding:4px 6px;width:auto;min-width:70px}
+  .err{background:var(--red-bg);border:1px solid var(--red);color:#ffb3ae;border-radius:10px;padding:12px 14px;margin-bottom:14px}
+  .note{background:var(--amber-bg);border:1px solid rgba(210,153,34,.4);border-radius:10px;padding:10px 14px;margin-bottom:14px;color:#f0d38c;font-size:13px}
+  .prose{max-width:720px;color:#c9d3dd}
+  .prose h3{color:var(--text);margin:22px 0 6px}
+  .summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .summary .card{padding:12px}
+  .summary .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+  .hide{display:none}
+  @media (max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Edge<span>.</span> NFL value finder</h1>
+  <div class="sub">Ranks DraftKings bets by expected value against the sharp market. It finds mispriced lines; it doesn't predict games.</div>
+</header>
+<main>
+  <nav id="tabs">
+    <button data-t="best" class="on">Best bets</button>
+    <button data-t="all">All lines</button>
+    <button data-t="mine">My bets</button>
+    <button data-t="settings">Settings</button>
+    <button data-t="how">How it works</button>
+  </nav>
+
+  <div id="msg"></div>
+
+  <section id="t-best">
+    <div class="bar">
+      <button class="btn primary" id="refresh">Refresh odds</button>
+      <span class="chip" id="fetched">Not loaded</span>
+      <span class="chip" id="credits"></span>
+      <span class="chip" id="countchip"></span>
+    </div>
+    <div id="bestList"></div>
+  </section>
+
+  <section id="t-all" class="hide">
+    <div class="bar">
+      <select id="mktFilter" style="width:auto">
+        <option value="">All markets</option><option value="spreads">Spreads</option>
+        <option value="totals">Totals</option><option value="h2h">Moneylines</option>
+      </select>
+      <span class="chip">Sorted by edge. Red “trap” = wins often, loses money.</span>
+    </div>
+    <div class="tablewrap"><table id="allTable"></table></div>
+  </section>
+
+  <section id="t-mine" class="hide">
+    <div class="summary" id="mySummary"></div>
+    <div class="tablewrap"><table id="myTable"></table></div>
+    <div class="bar" style="margin-top:12px">
+      <button class="btn" id="addManual">+ Add a bet manually</button>
+      <button class="btn" id="exportCsv">Export CSV</button>
+    </div>
+  </section>
+
+  <section id="t-settings" class="hide">
+    <div class="card">
+      <div class="settings">
+        <div><label>Bankroll ($) — money set aside only for betting</label><input id="s-bankroll" type="number" min="0" step="50"></div>
+        <div><label>Kelly fraction (0.25 = quarter Kelly)</label><input id="s-kelly" type="number" min="0.05" max="1" step="0.05"></div>
+        <div><label>Max stake per bet (% of bankroll)</label><input id="s-max" type="number" min="0.5" max="10" step="0.5"></div>
+        <div><label>Minimum edge to show in Best bets (%)</label><input id="s-min" type="number" min="0" max="10" step="0.5"></div>
+        <div><label>Reference prices</label>
+          <select id="s-ref"><option value="any">Pinnacle, else 3+ book consensus</option><option value="sharp">Pinnacle only</option></select></div>
+      </div>
+      <p class="sub" style="margin-top:12px">Settings and your bet log are saved in this browser only.</p>
+    </div>
+  </section>
+
+  <section id="t-how" class="hide">
+    <div class="prose">
+      <h3>What “edge” means</h3>
+      <p>Each bet's <b>fair probability</b> comes from Pinnacle, the sharpest legal book in the world, with its vig removed. If Pinnacle doesn't have the line, the app uses the median of 3+ other books. <b>Edge</b> is what DraftKings' price pays compared with that fair probability. +2% means you'd expect to make about $2 per $100 bet over many bets.</p>
+      <h3>Why not “highest chance of winning”?</h3>
+      <p>A -380 favorite wins about 75% of the time, but at that price you need it to win 79% just to break even. Bets like that win most weeks and lose money over a season. The app flags them as <b>traps</b>.</p>
+      <h3>Grades</h3>
+      <p><b class="pos">Strong</b> ≥ 3% edge · <b>Lean</b> 1–3% · <b style="color:var(--amber)">Thin</b> 0–1% (inside the noise) · <b class="neg">Pass</b> negative. Real NFL edges at DraftKings are usually small and rare. Some weeks nothing qualifies, and that's the app doing its job.</p>
+      <h3>Stake size</h3>
+      <p>Fractional Kelly: bigger edges get bigger bets, capped at your max %. Quarter Kelly with a 2% cap is deliberately conservative, because the fair probabilities are estimates.</p>
+      <h3>How to know if it's working: CLV</h3>
+      <p>After 30 bets your win/loss record is mostly luck. <b>Closing line value</b> tells you more. Log the DraftKings price right before kickoff as the “closing” odds. If you consistently got better prices than the close, you're finding real value. If not, you aren't, whatever your record says.</p>
+      <h3>Caveats</h3>
+      <p>Odds move quickly. Always check the live DraftKings price before betting, and skip the bet if it moved. Pinnacle and DK can update minutes apart, so an apparent edge can be a stale line. Spreads and totals only compare when both books are on the same number. Odds refresh at most every 10 minutes to save API credits (free tier ≈ 80 refreshes/month).</p>
+      <p>Only bet money you're fine losing. If betting stops being fun, the Oregon Problem Gambling helpline is 1-877-695-4648 (free and confidential).</p>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { analyze, stake, fmtAm, amToDec, betProfit, clv } from "./engine.js";
+
+// ---------- storage (per-browser) ----------
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+};
+const S = Object.assign({ bankroll: 500, kellyFrac: 0.25, maxPct: 2, minEdge: 1, ref: "any" }, store.get("edge.settings", {}));
+let bets = store.get("edge.bets", []);
+let rows = [], sortKey = "ev", sortDir = -1;
+
+const $ = (id) => document.getElementById(id);
+const pct = (x, d = 1) => `${(x * 100).toFixed(d)}%`;
+const money = (x) => `${x < 0 ? "-" : ""}$${Math.abs(x).toFixed(2)}`;
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const when = (iso) => new Date(iso).toLocaleString([], { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset()*6e4).toISOString().slice(0,10); };
+const stakeOpts = () => ({ bankroll: +S.bankroll, kellyFrac: +S.kellyFrac, maxPct: +S.maxPct / 100 });
+
+// ---------- tabs ----------
+$("tabs").onclick = (e) => {
+  const t = e.target.dataset.t; if (!t) return;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  document.querySelectorAll("main > section").forEach(s => s.classList.toggle("hide", s.id !== "t-" + t));
+  if (t === "mine") renderMine();
+};
+
+// ---------- settings ----------
+const bind = (id, key) => { const el = $(id); el.value = S[key]; el.onchange = () => { S[key] = el.type === "number" ? +el.value : el.value; store.set("edge.settings", S); renderAll(); }; };
+bind("s-bankroll","bankroll"); bind("s-kelly","kellyFrac"); bind("s-max","maxPct"); bind("s-min","minEdge"); bind("s-ref","ref");
+
+// ---------- data ----------
+async function load(sample = false) {
+  $("msg").innerHTML = "";
+  $("fetched").textContent = "Loading…";
+  try {
+    const r = await fetch(sample ? "./sample.json" : "/api/odds");
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    const res = analyze(data.games);
+    rows = res.rows;
+    $("fetched").innerHTML = `Odds as of <b>${new Date(data.fetchedAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</b>`;
+    $("credits").innerHTML = data.sample ? "<b>Sample data</b> — not real odds" : `API credits left: <b>${data.remaining ?? "?"}</b>`;
+    $("countchip").innerHTML = `<b>${res.gamesWithDK}</b> upcoming games on DK`;
+    if (data.sample) $("msg").innerHTML = `<div class="note">You're looking at <b>sample data</b>. Don't bet off it. Click “Refresh odds” once your API key is set.</div>`;
+    renderAll();
+  } catch (e) {
+    $("fetched").textContent = "Failed to load";
+    $("msg").innerHTML = `<div class="err"><b>Couldn't load odds.</b> ${esc(e.message)}<br><button class="btn" style="margin-top:8px" id="demo">Preview with sample data</button></div>`;
+    $("demo").onclick = () => load(true);
+  }
+}
+$("refresh").onclick = () => load(false);
+
+const visibleRows = () => S.ref === "sharp" ? rows.filter(r => r.sharp) : rows;
+
+// ---------- render: best bets ----------
+function renderBest() {
+  const best = visibleRows().filter(r => r.ev * 100 >= S.minEdge);
+  if (!rows.length) { $("bestList").innerHTML = ""; return; }
+  if (!best.length) {
+    const top = visibleRows()[0];
+    $("bestList").innerHTML = `<div class="empty"><h3>No bets clear your ${S.minEdge}% edge bar right now</h3>
+      That's normal. DraftKings' NFL lines are usually close to fair.${top ? ` The closest is <b>${esc(top.pick)}</b> at ${fmtAm(top.price)} (${pct(top.ev)} edge).` : ""}
+      <br>Lines move most mid-week and after injury news, so check again later.</div>`;
+    return;
+  }
+  $("bestList").innerHTML = `<div class="grid">${best.map(card).join("")}</div>`;
+  document.querySelectorAll("[data-log]").forEach(b => b.onclick = () => logBet(b.dataset.log));
+}
+function card(r) {
+  const st = stake(r, stakeOpts());
+  return `<div class="card ${r.grade}">
+    <div class="row1"><div><div class="pick">${esc(r.pick)} <span style="color:var(--muted);font-weight:600">${fmtAm(r.price)}</span></div>
+      <div class="game">${esc(r.game)} · ${when(r.start)} · ${r.marketLabel}</div></div>
+      <span class="badge b-${r.grade}">${r.grade} +${pct(r.ev)}</span></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Win prob</div><div class="v">${pct(r.fairProb)}</div></div>
+      <div class="stat"><div class="k">Need to win</div><div class="v">${pct(r.breakeven)}</div></div>
+      <div class="stat"><div class="k">Fair odds</div><div class="v">${fmtAm(r.fairAm)}</div></div>
+      <div class="stat"><div class="k">Bet</div><div class="v">$${st}</div></div>
+    </div>
+    <div class="foot"><span>vs ${esc(r.source)}</span><button class="btn" data-log="${esc(r.id)}">Log this bet</button></div>
+  </div>`;
+}
+
+// ---------- render: all lines ----------
+function renderAll_() {
+  const f = $("mktFilter").value;
+  const list = visibleRows().filter(r => !f || r.market === f).sort((a,b) => (a[sortKey] > b[sortKey] ? 1 : -1) * sortDir);
+  const cols = [["pick","Bet"],["game","Game"],["price","DK","r"],["fairAm","Fair","r"],["fairProb","Win %","r"],["breakeven","Need","r"],["ev","Edge","r"],["source","Reference"]];
+  $("allTable").innerHTML = `<tr>${cols.map(c => `<th class="${c[2]||""}" data-k="${c[0]}">${c[1]}${sortKey===c[0]?(sortDir<0?" ↓":" ↑"):""}</th>`).join("")}<th></th></tr>` +
+    (list.length ? list.map(r => `<tr>
+      <td><b>${esc(r.pick)}</b></td><td style="color:var(--muted)">${esc(r.game)}</td>
+      <td class="r">${fmtAm(r.price)}</td><td class="r">${fmtAm(r.fairAm)}</td><td class="r">${pct(r.fairProb)}</td><td class="r">${pct(r.breakeven)}</td>
+      <td class="r ${r.ev>=0?"pos":"neg"}">${r.ev>=0?"+":""}${pct(r.ev)}</td>
+      <td style="color:var(--muted)">${esc(r.source)}</td>
+      <td>${r.trap ? `<span class="badge b-Trap">Trap</span>` : `<span class="badge b-${r.grade}">${r.grade}</span>`}</td></tr>`).join("")
+      : `<tr><td colspan="9" style="color:var(--muted)">No lines loaded.</td></tr>`);
+  document.querySelectorAll("#allTable th[data-k]").forEach(th => th.onclick = () => {
+    const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; renderAll_();
+  });
+}
+$("mktFilter").onchange = renderAll_;
+
+function renderAll(){ renderBest(); renderAll_(); }
+
+// ---------- bet log ----------
+function saveBets(){ store.set("edge.bets", bets); }
+function logBet(id) {
+  const r = rows.find(x => x.id === id); if (!r) return;
+  bets.unshift({ id: crypto.randomUUID(), rowId: r.id, date: today(), game: r.game, pick: r.pick,
+    price: r.price, stake: stake(r, stakeOpts()) || 10, fairProb: +r.fairProb.toFixed(4), ev: +r.ev.toFixed(4), closing: "", result: "pending" });
+  saveBets();
+  $("tabs").querySelector('[data-t="mine"]').click();
+}
+$("addManual").onclick = () => {
+  bets.unshift({ id: crypto.randomUUID(), date: today(), game: "", pick: "", price: -110, stake: 10, fairProb: null, ev: null, closing: "", result: "pending" });
+  saveBets(); renderMine();
+};
+function renderMine() {
+  const settled = bets.filter(b => ["win","loss","push"].includes(b.result));
+  const profit = settled.reduce((s,b) => s + betProfit(b), 0);
+  const risked = settled.reduce((s,b) => s + (+b.stake||0), 0);
+  const w = settled.filter(b=>b.result==="win").length, l = settled.filter(b=>b.result==="loss").length, p = settled.filter(b=>b.result==="push").length;
+  const clvs = bets.map(clv).filter(x => x != null);
+  const avgClv = clvs.length ? clvs.reduce((a,b)=>a+b,0)/clvs.length : null;
+  const beat = clvs.filter(x => x > 0).length;
+  const expected = settled.reduce((s,b) => s + (b.ev != null ? b.ev * b.stake : 0), 0);
+  $("mySummary").innerHTML = [
+    ["Record", `${w}-${l}${p?`-${p}`:""}`],
+    ["Profit", `<span class="${profit>=0?"pos":"neg"}">${money(profit)}</span>`],
+    ["ROI", risked ? `<span class="${profit>=0?"pos":"neg"}">${pct(profit/risked)}</span>` : "—"],
+    ["Expected profit", settled.length ? money(expected) : "—"],
+    ["Avg CLV", avgClv==null ? "—" : `<span class="${avgClv>=0?"pos":"neg"}">${avgClv>=0?"+":""}${pct(avgClv)}</span>`],
+    ["Beat the close", clvs.length ? `${beat}/${clvs.length}` : "—"],
+  ].map(([k,v]) => `<div class="card"><div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div></div>`).join("");
+
+  const live = (id) => rows.find(r => r.id === id);
+  $("myTable").innerHTML = `<tr><th>Date</th><th>Game</th><th>Bet</th><th class="r">Odds</th><th class="r">Stake</th><th class="r">Edge</th><th class="r">Closing odds</th><th class="r">CLV</th><th>Result</th><th class="r">P/L</th><th></th></tr>` +
+    (bets.length ? bets.map(b => {
+      const c = clv(b), lr = b.rowId && live(b.rowId);
+      return `<tr data-id="${b.id}">
+      <td><input data-f="date" type="date" value="${esc(b.date)}"></td>
+      <td><input data-f="game" value="${esc(b.game)}" placeholder="Game" style="min-width:180px"></td>
+      <td><input data-f="pick" value="${esc(b.pick)}" placeholder="Bet" style="min-width:150px"></td>
+      <td class="r"><input data-f="price" type="number" value="${esc(b.price)}" style="width:80px"></td>
+      <td class="r"><input data-f="stake" type="number" value="${esc(b.stake)}" style="width:80px"></td>
+      <td class="r">${b.ev==null?"—":pct(b.ev)}</td>
+      <td class="r"><input data-f="closing" type="number" value="${esc(b.closing)}" placeholder="—" style="width:80px">${lr?` <button class="btn" data-close="${b.id}" title="Use current DK price" style="padding:3px 7px">now</button>`:""}</td>
+      <td class="r ${c==null?"":c>=0?"pos":"neg"}">${c==null?"—":(c>=0?"+":"")+pct(c)}</td>
+      <td><select data-f="result">${["pending","win","loss","push"].map(o=>`<option ${b.result===o?"selected":""}>${o}</option>`).join("")}</select></td>
+      <td class="r ${betProfit(b)>=0?"pos":"neg"}">${b.result==="pending"?"—":money(betProfit(b))}</td>
+      <td><button class="btn" data-del="${b.id}" style="padding:3px 8px">✕</button></td></tr>`;
+    }).join("") : `<tr><td colspan="11" style="color:var(--muted)">No bets yet. Use “Log this bet” on a Best bets card.</td></tr>`);
+
+  document.querySelectorAll("#myTable [data-f]").forEach(el => el.onchange = () => {
+    const b = bets.find(x => x.id === el.closest("tr").dataset.id); const f = el.dataset.f;
+    b[f] = ["price","stake"].includes(f) ? +el.value : el.value; saveBets(); renderMine();
+  });
+  document.querySelectorAll("[data-del]").forEach(el => el.onclick = () => { bets = bets.filter(b => b.id !== el.dataset.del); saveBets(); renderMine(); });
+  document.querySelectorAll("[data-close]").forEach(el => el.onclick = () => {
+    const b = bets.find(x => x.id === el.dataset.close); const r = live(b.rowId); if (r) { b.closing = r.price; saveBets(); renderMine(); }
+  });
+}
+$("exportCsv").onclick = () => {
+  const head = ["date","game","pick","price","stake","fairProb","ev","closing","result","profit"];
+  const csv = [head.join(",")].concat(bets.map(b => head.map(h => JSON.stringify(h==="profit"?betProfit(b):(b[h]??""))).join(","))).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download = "edge-bets.csv"; a.click();
+};
+
+load(false);
+</script>
+</body>
+</html>
